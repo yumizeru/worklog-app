@@ -1,5 +1,6 @@
 // ワンタッチ作業報告：開始・終了を管理者のスマホに通知する Edge Function
 //  - アプリが打刻した直後に { punch_id } で呼ぶ → その会社の管理者全員に通知
+//  - 招待コードで参加した直後に { joined: true } で呼ぶ → 管理者に「〇〇さんが参加しました」
 //  - { test: true } で呼ぶと、呼んだ本人の端末にテスト通知を送る
 //  通知用の鍵はデータベースの wl_secrets にある（サーバーだけが読める）
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
@@ -69,6 +70,26 @@ Deno.serve(async (req) => {
     if (body.test) {
       const r = await sendTo([uid], { title: 'ワンタッチ報告', body: 'テスト通知です。この端末で受け取れます。', tag: 'test', url: APP_URL });
       return json({ ok: r.ok > 0, sent: r.ok, errors: r.errors, error: r.ok ? undefined : 'no_device' });
+    }
+
+    // 新しいメンバーが参加した → 管理者に知らせる（参加から10分以内の1回だけ）
+    if (body.joined) {
+      const { data: m, error: me } = await db.from('wl_members').select('*').eq('user_id', uid).maybeSingle();
+      if (me) throw me;
+      if (!m) return json({ ok: false, error: 'not_member' }, 404);
+      if (Date.now() - new Date(m.created_at).getTime() > 10 * 60 * 1000) return json({ ok: false, error: 'too_old' }, 400);
+      const { data: admins, error: ae } = await db.from('wl_members').select('user_id')
+        .eq('org_id', m.org_id).eq('role', 'admin').eq('active', true).neq('user_id', uid);
+      if (ae) throw ae;
+      const { count } = await db.from('wl_members').select('user_id', { count: 'exact', head: true })
+        .eq('org_id', m.org_id).eq('active', true);
+      const r = await sendTo((admins ?? []).map((a) => a.user_id), {
+        title: `${m.display_name}さんが参加しました`,
+        body: `メンバーは${count ?? '?'}人になりました（${u.user.email ?? ''}）`,
+        tag: `join-${uid}`,
+        url: APP_URL,
+      });
+      return json({ ok: true, sent: r.ok, errors: r.errors });
     }
 
     const { data: p, error: pe } = await db.from('wl_punches').select('*')

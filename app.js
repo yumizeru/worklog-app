@@ -127,6 +127,7 @@ async function joinOrCreate(mode, name, code, orgName) {
   } else {
     const { error } = await sb.rpc('wl_join_org', { p_code: code, p_display_name: name });
     if (error) throw error;
+    notifyAdmins({ joined: true });
   }
 }
 
@@ -434,7 +435,7 @@ $('#punchBtn').addEventListener('click', async () => {
     if (kind === 'start') ls.set(LAST_SITE_KEY, siteId || FREE);
     if (siteName) rememberSite(siteName);
     clearPhoto();
-    notifyAdmins(data.id);
+    notifyAdmins({ punch_id: data.id });
     toast(`${kind === 'start' ? '開始' : '終了'}を記録しました（${hm(data.created_at)}）${pos.error ? '／位置：' + pos.error : ''}`, 3500);
     if (navigator.vibrate) navigator.vibrate(60);
   } catch (e) {
@@ -445,14 +446,14 @@ $('#punchBtn').addEventListener('click', async () => {
   }
 });
 
-// 管理者への通知（失敗しても記録には影響しない）
-async function notifyAdmins(punchId) {
+// 管理者への通知（打刻・新しいメンバーの参加。失敗しても記録には影響しない）
+async function notifyAdmins(payload) {
   try {
     const { data } = await sb.auth.getSession();
     await fetch(NOTIFY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session.access_token}`, apikey: SUPABASE_KEY },
-      body: JSON.stringify({ punch_id: punchId }),
+      body: JSON.stringify(payload),
     });
   } catch {}
 }
