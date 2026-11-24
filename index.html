@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="5">
+<meta name="app-version" content="6">
 <meta name="theme-color" content="#0f766e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -37,6 +37,14 @@
       <label>メールアドレス<input id="liEmail" type="email" autocomplete="email" required></label>
       <label>パスワード<input id="liPass" type="password" autocomplete="current-password" required></label>
       <button class="btn primary wide" type="submit">ログイン</button>
+      <button class="btn link" type="button" id="forgotOpen">パスワードを忘れた</button>
+    </form>
+
+    <form id="forgotForm" class="card form" hidden>
+      <p class="small">登録したメールアドレスに、パスワードを決め直すためのリンクを送ります。</p>
+      <label>メールアドレス<input id="fgEmail" type="email" autocomplete="email" required></label>
+      <button class="btn primary wide" type="submit">メールを送る</button>
+      <button class="btn link" type="button" id="forgotClose">ログインに戻る</button>
     </form>
 
     <form id="signupForm" class="card form" hidden>
@@ -55,6 +63,17 @@
       <button class="btn primary wide" type="submit">登録してはじめる</button>
     </form>
     <p id="authMsg" class="msg" role="alert"></p>
+  </section>
+
+  <!-- パスワードを決め直す（メールのリンクから来たとき） -->
+  <section id="vReset" class="view" hidden>
+    <form id="resetForm" class="card form">
+      <p>新しいパスワードを決めてください。</p>
+      <label>新しいパスワード<small>6文字以上</small><input id="rsPass" type="password" minlength="6" autocomplete="new-password" required></label>
+      <label>もう一度<input id="rsPass2" type="password" minlength="6" autocomplete="new-password" required></label>
+      <button class="btn primary wide" type="submit">変更する</button>
+    </form>
+    <p id="resetMsg" class="msg" role="alert"></p>
   </section>
 
   <!-- ログイン済みだが、まだ会社に入っていない -->

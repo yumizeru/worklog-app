@@ -3,10 +3,10 @@
  * ワンタッチ報告
  *  - 作業する人：ボタン1つで開始・終了を記録（時刻・位置・現場・写真）
  *  - 管理者：今だれが作業中か、日ごとの履歴、開始・終了の通知
- *  データは Supabase（ひびログと同じプロジェクトの wl_ テーブル）
+ *  データは Supabase（ワンタッチ報告専用のプロジェクト。ひびログとはログインも別）
  * ===================================================================== */
-const SUPABASE_URL = 'https://qfhtjrubmjuvabcmpzjn.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_zc86u4BRcsmfWfaKZGRsNw_cod3V7Xp';
+const SUPABASE_URL = 'https://jwrtsrmkrcqgogtebcjf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_R3NQrdZ2vcIU4wnHFjtjCg_hDajqbRN';
 const VAPID_PUBLIC_KEY = 'BO4espzceP3Rb2WQI8nK_uxSwQYSHUQByFTEhA2gbsCGIEZOa7jK2_IDJgsyq3W2hxmRm0BIxswAaRdFqtYPTlE';
 const NOTIFY_URL = `${SUPABASE_URL}/functions/v1/wl-notify`;
 const APP_URL = 'https://yumizeru.github.io/worklog-app/';
@@ -21,8 +21,14 @@ const ls = {
   set(k, v) { try { localStorage.setItem(k, v); } catch {} },
 };
 
+// パスワード再設定メールのリンクから来たか（URLの # に type=recovery が付く）
+const urlHash = new URLSearchParams(location.hash.slice(1));
+const fromRecovery = urlHash.get('type') === 'recovery';
+const linkError = urlHash.get('error_code');
+
+// 保存名は v6 で変更（前のプロジェクトのログイン情報を使わない）
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'worklog-auth' },
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit', storageKey: 'worklog-auth-v2' },
 });
 
 const state = {
@@ -70,6 +76,8 @@ function errText(e) {
   for (const k of Object.keys(ERRORS)) if (m.includes(k)) return ERRORS[k];
   if (/Failed to fetch|NetworkError|network/i.test(m)) return '通信できませんでした。電波のよい所でもう一度押してください';
   if (/Password should be/i.test(m)) return 'パスワードは6文字以上にしてください';
+  if (/different from the old/i.test(m)) return '前と違うパスワードにしてください';
+  if (/rate limit|security purposes/i.test(m)) return '少し時間をおいてから、もう一度送ってください';
   if (/valid email|invalid format/i.test(m)) return 'メールアドレスの形が正しくありません';
   return m;
 }
@@ -100,8 +108,47 @@ $$('[data-auth]').forEach(b => b.addEventListener('click', () => {
   $$('[data-auth]').forEach(x => x.classList.toggle('on', x === b));
   $('#loginForm').hidden = b.dataset.auth !== 'login';
   $('#signupForm').hidden = b.dataset.auth !== 'signup';
+  $('#forgotForm').hidden = true;
   $('#authMsg').textContent = '';
+  $('#authMsg').classList.remove('ok');
 }));
+
+/* ---------- パスワードを忘れたとき ---------- */
+function showForgot(on) {
+  $('#loginForm').hidden = on;
+  $('#forgotForm').hidden = !on;
+  $('#authMsg').textContent = '';
+  $('#authMsg').classList.remove('ok');
+  if (on) { $('#fgEmail').value = $('#liEmail').value.trim(); $('#fgEmail').focus(); }
+}
+$('#forgotOpen').addEventListener('click', () => showForgot(true));
+$('#forgotClose').addEventListener('click', () => showForgot(false));
+$('#forgotForm').addEventListener('submit', e => {
+  e.preventDefault();
+  busy(e.submitter || $('#forgotForm button'), async () => {
+    const msg = $('#authMsg');
+    msg.textContent = '';
+    msg.classList.remove('ok');
+    const { error } = await sb.auth.resetPasswordForEmail($('#fgEmail').value.trim(), { redirectTo: APP_URL });
+    if (error) { msg.textContent = errText(error); return; }
+    msg.textContent = 'メールを送りました。届いたメールのリンクを、このスマホで開いてください（届かないときは迷惑メールも見てください）';
+    msg.classList.add('ok');
+  });
+});
+
+$('#resetForm').addEventListener('submit', e => {
+  e.preventDefault();
+  busy(e.submitter || $('#resetForm button'), async () => {
+    const msg = $('#resetMsg');
+    msg.textContent = '';
+    if ($('#rsPass').value !== $('#rsPass2').value) { msg.textContent = '2つのパスワードが違います'; return; }
+    const { error } = await sb.auth.updateUser({ password: $('#rsPass').value });
+    if (error) { msg.textContent = errText(error); return; }
+    $('#rsPass').value = $('#rsPass2').value = '';
+    await boot();
+    toast('パスワードを変更しました');
+  });
+});
 $$('input[name=suMode]').forEach(r => r.addEventListener('change', () => setMode('su', r.value)));
 $$('input[name=jnMode]').forEach(r => r.addEventListener('change', () => setMode('jn', r.value)));
 
@@ -797,4 +844,13 @@ setMode('su', 'join');
 setMode('jn', 'join');
 Updater.start();
 sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') { state.session = null; state.me = null; show('vAuth'); } });
-boot();
+(async () => {
+  // getSession は URL のリンク情報を読み終えてから返る
+  const { data } = await sb.auth.getSession();
+  if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+  if (fromRecovery && data.session) { show('vReset'); return; }
+  await boot();
+  if (linkError) {
+    $('#authMsg').textContent = 'リンクの期限が切れています。もう一度「パスワードを忘れた」から送ってください';
+  }
+})();

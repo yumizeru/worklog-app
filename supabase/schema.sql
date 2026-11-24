@@ -1,5 +1,6 @@
 -- ワンタッチ作業報告（worklog）のテーブル
--- ひびログと同じ Supabase プロジェクトに置くので、名前は wl_ で始める
+-- 2026-11-24 v6 から専用プロジェクト（jwrtsrmkrcqgogtebcjf）に移した。名前の wl_ はそのまま
+-- 専用プロジェクトでは、テーブルの権限を列ごとに絞っている（anon / authenticated から一度 revoke してから必要な列だけ grant）
 -- DROP を使わない（MCP から流すと拒否されるため）。何度流しても同じ結果になるように書く
 
 create extension if not exists pgcrypto;
