@@ -287,8 +287,6 @@ function renderPunchState() {
     `<option value="${FREE}">その他（自分で入力する）</option>`;
   sel.value = active.some(s => s.id === keep) || keep === FREE ? keep : '';
   $('#siteSel').hidden = $('#siteSelLabel').hidden = !active.length;
-  const text = $('#siteText');
-  if (!text.value) text.value = siteHistory()[0] || '';
   $('#siteHistory').innerHTML = siteHistory().map(n => `<option value="${esc(n)}"></option>`).join('');
   syncSiteText();
 }
@@ -434,6 +432,12 @@ $('#punchBtn').addEventListener('click', async () => {
     if (error) throw error;
     if (kind === 'start') ls.set(LAST_SITE_KEY, siteId || FREE);
     if (siteName) rememberSite(siteName);
+    // 終了したら現場の選択・入力を空に戻す（次の現場で入れ直す）
+    if (kind === 'end') {
+      try { localStorage.removeItem(LAST_SITE_KEY); } catch {}
+      $('#siteText').value = '';
+      $('#siteSel').value = '';
+    }
     clearPhoto();
     notifyAdmins({ punch_id: data.id });
     toast(`${kind === 'start' ? '開始' : '終了'}を記録しました（${hm(data.created_at)}）${pos.error ? '／位置：' + pos.error : ''}`, 3500);
