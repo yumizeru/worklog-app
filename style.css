@@ -145,6 +145,8 @@ fieldset.choice legend { font-weight: 600; padding: 0 4px; }
 .list li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
 .list.compact li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
 .list.compact li .grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+#memberList li { flex-wrap: wrap; }
+#memberList li .grow { flex-basis: 100%; }
 .list li.empty { color: var(--muted); text-align: center; background: none; border-style: dashed; }
 .list li.tap { cursor: pointer; }
 .rec { display: flex; gap: 10px; align-items: flex-start; }

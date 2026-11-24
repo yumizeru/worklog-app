@@ -1,6 +1,6 @@
 // オフラインでも開けるようにファイルをキャッシュする
 // 更新するときは index.html の app-version と version.json も同じ番号にそろえる
-const VERSION = 'worklog-v6';
+const VERSION = 'worklog-v7';
 const SUPABASE_LIB = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js';
 const FILES = [
   './',

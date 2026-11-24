@@ -8,6 +8,7 @@
 """
 import json
 import os
+import secrets
 import subprocess
 import sys
 import urllib.error
@@ -129,6 +130,26 @@ def main():
         check('作業者が終了を記録できる', st == 200, f'{st} {p}')
         if st == 200:
             created.append(p['id'])
+
+        # 管理者によるパスワードの再設定（本物の会社の人には触れない）
+        admin_url = f'{URL}/functions/v1/wl-admin'
+        st, mem = call('GET', f'{URL}/rest/v1/wl_members?select=user_id,role', as_user(admin))
+        staff_id = next((r['user_id'] for r in mem if r['role'] == 'staff'), None) if st == 200 else None
+        admin_id = next((r['user_id'] for r in mem if r['role'] == 'admin'), None) if st == 200 else None
+        pw = secrets.token_urlsafe(12)
+        st, r = call('POST', admin_url, as_user(staff), {'action': 'set_password', 'user_id': admin_id, 'password': pw})
+        check('作業者はパスワードの再設定を使えない', st == 403, f'{st} {r}')
+        st, r = call('POST', admin_url, as_user(admin), {'action': 'set_password', 'user_id': staff_id, 'password': pw})
+        check('管理者は同じ会社の人のパスワードを再設定できる', st == 200 and r.get('ok') is True, f'{st} {r}')
+        st, r = call('POST', admin_url, as_user(admin),
+                     {'action': 'set_password', 'user_id': '00000000-0000-4000-8000-00000000dead', 'password': pw})
+        check('ほかの会社の人・知らない人は再設定できない', st == 404, f'{st} {r}')
+        st, r = call('POST', admin_url, as_user(admin), {'action': 'set_password', 'user_id': admin_id, 'password': pw})
+        check('自分のパスワードは設定画面から変える', st == 400 and r.get('error') == 'use_own_settings', f'{st} {r}')
+        st, r = call('POST', admin_url, as_user(admin), {'action': 'set_password', 'user_id': staff_id, 'password': '123'})
+        check('短すぎるパスワードは断る', st == 400 and r.get('error') == 'weak_password', f'{st} {r}')
+        st, r = call('POST', admin_url, {'apikey': PUBLISHABLE}, {'action': 'set_password', 'user_id': staff_id, 'password': pw})
+        check('ログインしていないと使えない', st == 401, f'{st} {r}')
 
         # ログイン前の人には何も見えない
         st, rows = call('GET', f'{URL}/rest/v1/wl_punches?select=id', {'apikey': PUBLISHABLE})

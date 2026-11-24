@@ -9,6 +9,7 @@ const SUPABASE_URL = 'https://jwrtsrmkrcqgogtebcjf.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_R3NQrdZ2vcIU4wnHFjtjCg_hDajqbRN';
 const VAPID_PUBLIC_KEY = 'BO4espzceP3Rb2WQI8nK_uxSwQYSHUQByFTEhA2gbsCGIEZOa7jK2_IDJgsyq3W2hxmRm0BIxswAaRdFqtYPTlE';
 const NOTIFY_URL = `${SUPABASE_URL}/functions/v1/wl-notify`;
+const ADMIN_URL = `${SUPABASE_URL}/functions/v1/wl-admin`;
 const APP_URL = 'https://yumizeru.github.io/worklog-app/';
 const LAST_SITE_KEY = 'worklog:lastSite';
 const HINT_KEY = 'worklog:hintHidden';
@@ -78,6 +79,8 @@ function errText(e) {
   if (/Password should be/i.test(m)) return 'パスワードは6文字以上にしてください';
   if (/different from the old/i.test(m)) return '前と違うパスワードにしてください';
   if (/rate limit|security purposes/i.test(m)) return '少し時間をおいてから、もう一度送ってください';
+  if (/weak_password|weak password/i.test(m)) return 'パスワードは6文字以上にしてください';
+  if (/not_same_org/.test(m)) return 'その人は見つかりません。画面を更新してください';
   if (/valid email|invalid format/i.test(m)) return 'メールアドレスの形が正しくありません';
   return m;
 }
@@ -115,26 +118,14 @@ $$('[data-auth]').forEach(b => b.addEventListener('click', () => {
 
 /* ---------- パスワードを忘れたとき ---------- */
 function showForgot(on) {
+  // メールは無料プランだと会員に届かないので、管理者に再設定してもらう案内を出す
   $('#loginForm').hidden = on;
   $('#forgotForm').hidden = !on;
   $('#authMsg').textContent = '';
   $('#authMsg').classList.remove('ok');
-  if (on) { $('#fgEmail').value = $('#liEmail').value.trim(); $('#fgEmail').focus(); }
 }
 $('#forgotOpen').addEventListener('click', () => showForgot(true));
 $('#forgotClose').addEventListener('click', () => showForgot(false));
-$('#forgotForm').addEventListener('submit', e => {
-  e.preventDefault();
-  busy(e.submitter || $('#forgotForm button'), async () => {
-    const msg = $('#authMsg');
-    msg.textContent = '';
-    msg.classList.remove('ok');
-    const { error } = await sb.auth.resetPasswordForEmail($('#fgEmail').value.trim(), { redirectTo: APP_URL });
-    if (error) { msg.textContent = errText(error); return; }
-    msg.textContent = 'メールを送りました。届いたメールのリンクを、このスマホで開いてください（届かないときは迷惑メールも見てください）';
-    msg.classList.add('ok');
-  });
-});
 
 $('#resetForm').addEventListener('submit', e => {
   e.preventDefault();
@@ -637,6 +628,7 @@ function renderSettings() {
         ${m.role === 'admin' ? '<span class="tag admin">管理者</span>' : ''} ${m.active ? '' : '<span class="tag off">停止中</span>'}</span>
       <button class="btn small ghost" data-act="role">${m.role === 'admin' ? '管理者を外す' : '管理者にする'}</button>
       <button class="btn small ghost" data-act="active">${m.active ? '停止' : '再開'}</button>
+      ${m.user_id === myId ? '' : `<button class="btn small ghost" data-act="password">${icon('key-round')}パスワード</button>`}
     </li>`).join('');
   fillMemberFilter();
   Push.render();
@@ -650,6 +642,17 @@ $('#saveName').addEventListener('click', e => busy(e.currentTarget, async () => 
   await boot();
   toast('名前を保存しました');
 }));
+
+$('#pwForm').addEventListener('submit', e => {
+  e.preventDefault();
+  busy(e.submitter || $('#pwForm button'), async () => {
+    if ($('#pwNew').value !== $('#pwNew2').value) { toast('2つのパスワードが違います'); return; }
+    const { error } = await sb.auth.updateUser({ password: $('#pwNew').value });
+    if (error) { toast(errText(error)); return; }
+    $('#pwNew').value = $('#pwNew2').value = '';
+    toast('パスワードを変えました');
+  });
+});
 
 $('#copyInvite').addEventListener('click', async () => {
   const text = `作業報告アプリ「ワンタッチ報告」への招待です。\n1. ${APP_URL} を開く\n2.「はじめて使う」を押す\n3. 名前（フルネーム）・メール・パスワードを入れ、招待コード ${state.org.invite_code} を入れて登録\nホーム画面に追加すると1タップで開けます。`;
@@ -700,6 +703,25 @@ $('#memberList').addEventListener('click', async e => {
   const b = e.target.closest('button[data-act]');
   if (!b) return;
   const m = state.members.find(x => x.user_id === b.closest('[data-uid]').dataset.uid);
+  if (b.dataset.act === 'password') {
+    const pw = prompt(`${m.display_name}さんの仮のパスワードを決めてください（6文字以上）。\n決めたら本人に伝えて、ログイン後に「設定」→「アカウント」で変えてもらってください。`, '');
+    if (pw == null) return;
+    if (pw.trim().length < 6) { toast('パスワードは6文字以上にしてください'); return; }
+    await busy(b, async () => {
+      const { data } = await sb.auth.getSession();
+      try {
+        const res = await fetch(ADMIN_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${data.session.access_token}` },
+          body: JSON.stringify({ action: 'set_password', user_id: m.user_id, password: pw.trim() }),
+        });
+        const r = await res.json().catch(() => ({}));
+        if (!r.ok) { toast(errText(r.error || res.status)); return; }
+        toast(`${m.display_name}さんのパスワードを変えました。本人に伝えてください`, 4000);
+      } catch (err) { toast(errText(err)); }
+    });
+    return;
+  }
   let patch, ask;
   if (b.dataset.act === 'role') {
     patch = { role: m.role === 'admin' ? 'staff' : 'admin' };

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="6">
+<meta name="app-version" content="7">
 <meta name="theme-color" content="#0f766e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -40,12 +40,13 @@
       <button class="btn link" type="button" id="forgotOpen">パスワードを忘れた</button>
     </form>
 
-    <form id="forgotForm" class="card form" hidden>
-      <p class="small">登録したメールアドレスに、パスワードを決め直すためのリンクを送ります。</p>
-      <label>メールアドレス<input id="fgEmail" type="email" autocomplete="email" required></label>
-      <button class="btn primary wide" type="submit">メールを送る</button>
+    <div id="forgotForm" class="card form" hidden>
+      <p><b>パスワードを忘れたとき</b></p>
+      <p class="small">会社の管理者に「パスワードを再設定してほしい」と伝えてください。管理者が仮のパスワードを決めて教えてくれます。</p>
+      <p class="small">仮のパスワードでログインしたら、「設定」→「アカウント」で自分のパスワードに変えられます。</p>
+      <p class="small muted">管理者の人が忘れたときは、ほかの管理者に頼んでください。</p>
       <button class="btn link" type="button" id="forgotClose">ログインに戻る</button>
-    </form>
+    </div>
 
     <form id="signupForm" class="card form" hidden>
       <label>あなたの名前<small>管理者の画面にこの名前で表示されます（フルネーム推奨）</small>
@@ -165,6 +166,11 @@
         <label>名前<small>管理者の画面に出る名前。変えても過去の記録の名前はそのまま</small><input id="myName" type="text" maxlength="40"></label>
         <button class="btn" type="button" id="saveName">名前を保存</button>
         <p class="muted small">メール：<span id="myEmail"></span></p>
+        <form id="pwForm" class="form">
+          <label>パスワードを変える<small>6文字以上</small><input id="pwNew" type="password" minlength="6" autocomplete="new-password" placeholder="新しいパスワード" required></label>
+          <input id="pwNew2" type="password" minlength="6" autocomplete="new-password" placeholder="もう一度" required>
+          <button class="btn" type="submit">パスワードを変える</button>
+        </form>
         <button class="btn danger-ghost" type="button" data-logout><i data-icon="log-out"></i>ログアウト</button>
       </div>
     </details>
@@ -212,6 +218,7 @@
       <div class="acc-body">
         <ul id="memberList" class="list compact"></ul>
         <p class="muted small">「停止」にした人は記録できなくなります（過去の記録は残ります）。</p>
+        <p class="muted small">パスワードを忘れた人がいたら「パスワード」から仮のパスワードを決めて、本人に伝えてください。</p>
       </div>
     </details>
 
