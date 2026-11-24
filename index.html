@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="app-version" content="1">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ワンタッチ報告">
+<title>ワンタッチ報告</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <h1 id="title">ワンタッチ報告</h1>
+  <span id="who" class="who"></span>
+</header>
+
+<main>
+  <!-- 読み込み中 -->
+  <section id="vLoading" class="view"><p class="center muted">読み込み中…</p></section>
+
+  <!-- ログイン・登録 -->
+  <section id="vAuth" class="view" hidden>
+    <div class="seg" role="tablist">
+      <button type="button" class="on" data-auth="login">ログイン</button>
+      <button type="button" data-auth="signup">はじめて使う</button>
+    </div>
+
+    <form id="loginForm" class="card form">
+      <label>メールアドレス<input id="liEmail" type="email" autocomplete="email" required></label>
+      <label>パスワード<input id="liPass" type="password" autocomplete="current-password" required></label>
+      <button class="btn primary wide" type="submit">ログイン</button>
+    </form>
+
+    <form id="signupForm" class="card form" hidden>
+      <label>あなたの名前<small>管理者の画面にこの名前で表示されます（フルネーム推奨）</small>
+        <input id="suName" type="text" maxlength="40" autocomplete="name" placeholder="例：山田 太郎" required></label>
+      <label>メールアドレス<input id="suEmail" type="email" autocomplete="email" required></label>
+      <label>パスワード<small>6文字以上</small><input id="suPass" type="password" minlength="6" autocomplete="new-password" required></label>
+      <fieldset class="choice">
+        <legend>どちらで使う？</legend>
+        <label class="radio"><input type="radio" name="suMode" value="join" checked> 招待コードで参加する<small>作業する人はこちら</small></label>
+        <label class="radio"><input type="radio" name="suMode" value="create"> 会社・チームを新しく作る<small>管理者になります</small></label>
+      </fieldset>
+      <label id="suCodeRow">招待コード<small>管理者から教えてもらった8文字</small>
+        <input id="suCode" type="text" maxlength="12" autocapitalize="characters" autocomplete="off" placeholder="例：AB3D5F7H"></label>
+      <label id="suOrgRow" hidden>会社・チームの名前<input id="suOrg" type="text" maxlength="60" placeholder="例：株式会社〇〇"></label>
+      <button class="btn primary wide" type="submit">登録してはじめる</button>
+    </form>
+    <p id="authMsg" class="msg" role="alert"></p>
+  </section>
+
+  <!-- ログイン済みだが、まだ会社に入っていない -->
+  <section id="vJoin" class="view" hidden>
+    <div class="card">
+      <p>あと少しです。名前と、参加する会社を決めてください。</p>
+      <form id="joinForm" class="form">
+        <label>あなたの名前<small>管理者の画面にこの名前で表示されます</small>
+          <input id="jnName" type="text" maxlength="40" required></label>
+        <fieldset class="choice">
+          <legend>どちらで使う？</legend>
+          <label class="radio"><input type="radio" name="jnMode" value="join" checked> 招待コードで参加する</label>
+          <label class="radio"><input type="radio" name="jnMode" value="create"> 会社・チームを新しく作る（管理者）</label>
+        </fieldset>
+        <label id="jnCodeRow">招待コード<input id="jnCode" type="text" maxlength="12" autocapitalize="characters" autocomplete="off"></label>
+        <label id="jnOrgRow" hidden>会社・チームの名前<input id="jnOrg" type="text" maxlength="60"></label>
+        <button class="btn primary wide" type="submit">はじめる</button>
+      </form>
+      <p id="joinMsg" class="msg" role="alert"></p>
+      <button class="btn link" type="button" data-logout>別のアカウントでログインする</button>
+    </div>
+  </section>
+
+  <!-- 打刻 -->
+  <section id="vPunch" class="view" hidden>
+    <div id="installHint" class="card hint" hidden>
+      <b>ホーム画面に追加すると、アプリのように1タップで開けます。</b>
+      <span id="installHow"></span>
+      <button class="btn link" type="button" id="installHide">閉じる</button>
+    </div>
+
+    <div id="stateCard" class="card state">
+      <div id="stateLabel" class="state-label"></div>
+      <div id="stateSub" class="state-sub"></div>
+    </div>
+
+    <label id="siteRow" class="field" hidden>現場・作業
+      <select id="siteSel"></select>
+    </label>
+
+    <div class="photo-row">
+      <label class="btn ghost" id="photoBtn">
+        <i data-icon="camera"></i><span>写真を付ける</span>
+        <input id="photoInput" type="file" accept="image/*" capture="environment" hidden>
+      </label>
+      <div id="photoPreview" class="photo-preview" hidden>
+        <img id="photoImg" alt="付ける写真">
+        <button type="button" id="photoClear" class="icon-btn" aria-label="写真を外す"><i data-icon="x"></i></button>
+      </div>
+    </div>
+
+    <button id="punchBtn" class="punch start" type="button">
+      <i data-icon="play"></i><span id="punchText">作業開始</span>
+    </button>
+    <p class="center muted small" id="geoNote">押すと時刻と位置情報が記録されます</p>
+
+    <h2 class="sec">今日の記録</h2>
+    <ul id="todayList" class="list"></ul>
+  </section>
+
+  <!-- 状況（管理者） -->
+  <section id="vStatus" class="view" hidden>
+    <div class="row between">
+      <p class="muted small" id="statusTime"></p>
+      <button class="btn ghost small" type="button" id="statusReload"><i data-icon="refresh-cw"></i>更新</button>
+    </div>
+    <ul id="statusList" class="list"></ul>
+  </section>
+
+  <!-- 履歴 -->
+  <section id="vHistory" class="view" hidden>
+    <div class="filters">
+      <label class="field">日付<input id="hDate" type="date"></label>
+      <label class="field" id="hMemberRow" hidden>メンバー<select id="hMember"></select></label>
+    </div>
+    <div id="hSummary" class="card summary" hidden></div>
+    <ul id="historyList" class="list"></ul>
+  </section>
+
+  <!-- 設定 -->
+  <section id="vSettings" class="view" hidden>
+    <details class="acc">
+      <summary><i data-icon="user"></i><span class="acc-text"><b>アカウント</b><small id="sumAccount"></small></span><i data-icon="chevron-right" class="chev"></i></summary>
+      <div class="acc-body form">
+        <label>名前<small>管理者の画面に出る名前。変えても過去の記録の名前はそのまま</small><input id="myName" type="text" maxlength="40"></label>
+        <button class="btn" type="button" id="saveName">名前を保存</button>
+        <p class="muted small">メール：<span id="myEmail"></span></p>
+        <button class="btn danger-ghost" type="button" data-logout><i data-icon="log-out"></i>ログアウト</button>
+      </div>
+    </details>
+
+    <details class="acc admin-only">
+      <summary><i data-icon="bell"></i><span class="acc-text"><b>通知</b><small id="sumPush"></small></span><i data-icon="chevron-right" class="chev"></i></summary>
+      <div class="acc-body">
+        <p class="small">メンバーが作業を開始・終了すると、この端末に通知が届きます。</p>
+        <p id="pushStatus" class="small muted"></p>
+        <div class="row wrap">
+          <button class="btn primary" type="button" id="pushOn">通知をオンにする</button>
+          <button class="btn" type="button" id="pushTest" hidden>テスト通知</button>
+          <button class="btn ghost" type="button" id="pushOff" hidden>オフにする</button>
+        </div>
+      </div>
+    </details>
+
+    <details class="acc admin-only">
+      <summary><i data-icon="key-round"></i><span class="acc-text"><b>招待コード</b><small id="sumCode"></small></span><i data-icon="chevron-right" class="chev"></i></summary>
+      <div class="acc-body">
+        <p class="small">作業する人には、アプリのURLとこのコードを伝えてください。「はじめて使う」から名前・メール・パスワード・コードを入れると参加できます。</p>
+        <div class="code" id="inviteCode"></div>
+        <div class="row wrap">
+          <button class="btn primary" type="button" id="copyInvite"><i data-icon="copy"></i>案内文をコピー</button>
+          <button class="btn ghost" type="button" id="rotateCode"><i data-icon="refresh-cw"></i>コードを作り直す</button>
+        </div>
+        <p class="muted small">作り直すと古いコードでは参加できなくなります（参加済みの人はそのまま）。</p>
+      </div>
+    </details>
+
+    <details class="acc admin-only">
+      <summary><i data-icon="map-pin"></i><span class="acc-text"><b>現場・作業</b><small id="sumSites"></small></span><i data-icon="chevron-right" class="chev"></i></summary>
+      <div class="acc-body">
+        <p class="small">登録すると、作業する人は開始のときにここから選びます。1つもなければ選ぶ欄は出ません。</p>
+        <form id="siteForm" class="row">
+          <input id="siteName" type="text" maxlength="60" placeholder="例：〇〇ビル改修" required>
+          <button class="btn primary" type="submit"><i data-icon="plus"></i>追加</button>
+        </form>
+        <ul id="siteList" class="list compact"></ul>
+      </div>
+    </details>
+
+    <details class="acc admin-only">
+      <summary><i data-icon="users"></i><span class="acc-text"><b>メンバー</b><small id="sumMembers"></small></span><i data-icon="chevron-right" class="chev"></i></summary>
+      <div class="acc-body">
+        <ul id="memberList" class="list compact"></ul>
+        <p class="muted small">「停止」にした人は記録できなくなります（過去の記録は残ります）。</p>
+      </div>
+    </details>
+
+    <details class="acc">
+      <summary><i data-icon="circle-help"></i><span class="acc-text"><b>使い方</b><small>はじめての方へ</small></span><i data-icon="chevron-right" class="chev"></i></summary>
+      <div class="acc-body help">
+        <h3>作業する人</h3>
+        <ol>
+          <li>現場・作業を選ぶ（選ぶ欄があるとき）。</li>
+          <li>写真を付けたいときは「写真を付ける」。付けなくても大丈夫。</li>
+          <li>大きな「作業開始」ボタンを押す。時刻と位置が記録されます。</li>
+          <li>終わったら同じ場所の「作業終了」を押す。</li>
+        </ol>
+        <p class="small">位置情報の許可を聞かれたら「許可」を選んでください。断っても時刻は記録されます。</p>
+        <h3>管理者</h3>
+        <ol>
+          <li>設定 →「招待コード」の案内文をコピーして、作業する人に送る。</li>
+          <li>設定 →「現場・作業」に現場を登録する（任意）。</li>
+          <li>設定 →「通知」をオンにすると、開始・終了のたびにスマホに届きます。</li>
+          <li>「状況」で今だれが作業中か、「履歴」で日ごとの記録・位置・写真を見られます。</li>
+        </ol>
+        <h3>ホーム画面に追加</h3>
+        <p class="small"><b>iPhone：</b>Safariで開き、下の共有ボタン →「ホーム画面に追加」。通知を使うにはこの方法で追加したアプリから開いてください（iOS 16.4以降）。</p>
+        <p class="small"><b>Android：</b>Chromeで開き、右上の︙ →「ホーム画面に追加」または「アプリをインストール」。</p>
+      </div>
+    </details>
+
+    <details class="acc">
+      <summary><i data-icon="settings"></i><span class="acc-text"><b>このアプリについて</b><small id="sumAbout"></small></span><i data-icon="chevron-right" class="chev"></i></summary>
+      <div class="acc-body">
+        <p class="small">会社：<span id="orgName"></span></p>
+        <button class="btn" type="button" id="checkUpdate"><i data-icon="refresh-cw"></i>更新を確認</button>
+        <p class="muted small">アイコン：Lucide Icons（ISC License）</p>
+      </div>
+    </details>
+  </section>
+</main>
+
+<nav class="tabs" id="tabs" hidden>
+  <button type="button" data-view="vPunch" class="on"><i data-icon="play"></i><span>打刻</span></button>
+  <button type="button" data-view="vStatus" class="admin-only"><i data-icon="users"></i><span>状況</span></button>
+  <button type="button" data-view="vHistory"><i data-icon="history"></i><span>履歴</span></button>
+  <button type="button" data-view="vSettings"><i data-icon="settings"></i><span>設定</span></button>
+</nav>
+
+<dialog id="detail">
+  <div class="dlg-head"><b id="detailTitle"></b><button type="button" class="icon-btn" id="detailClose" aria-label="閉じる"><i data-icon="x"></i></button></div>
+  <div id="detailBody"></div>
+</dialog>
+
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script src="icons.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
