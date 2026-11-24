@@ -1,0 +1,37 @@
+# Supabase の無料プランは、しばらく使われないとプロジェクトが止まる。
+# 週2回データベースに軽くアクセスして、止まらないようにする（ワンタッチ報告とひびログの両方）。
+# GitHub は60日間更新のないリポジトリの定期実行を止めるので、毎回この定期実行を有効に戻す。
+name: keepalive
+
+on:
+  schedule:
+    - cron: '17 0 * * 1,4'   # 月・木 9:17（日本時間）
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: worklog
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H 'apikey: sb_publishable_R3NQrdZ2vcIU4wnHFjtjCg_hDajqbRN' \
+            'https://jwrtsrmkrcqgogtebcjf.supabase.co/rest/v1/wl_orgs?select=id&limit=1')
+          echo "worklog: $code"
+          # 401/403 はデータベースまで届いて「権限なし」と返った印（アクセスとしては数えられる）
+          case "$code" in 200|401|403) ;; *) exit 1 ;; esac
+      - name: hibilog
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H 'apikey: sb_publishable_zc86u4BRcsmfWfaKZGRsNw_cod3V7Xp' \
+            'https://qfhtjrubmjuvabcmpzjn.supabase.co/rest/v1/user_data?select=user_id&limit=1')
+          echo "hibilog: $code"
+          case "$code" in 200|401|403) ;; *) exit 1 ;; esac
+      - name: keep this schedule enabled
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/keepalive.yml/enable"
