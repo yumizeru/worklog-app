@@ -100,7 +100,7 @@ do $$ begin
 
   if not exists (select 1 from pg_policies where tablename = 'wl_members' and policyname = 'wl_members_read') then
     create policy wl_members_read on public.wl_members for select to authenticated
-      using (user_id = auth.uid() or org_id = public.wl_my_org());
+      using (user_id = auth.uid() or (org_id = public.wl_my_org() and public.wl_is_admin()));
   end if;
   if not exists (select 1 from pg_policies where tablename = 'wl_members' and policyname = 'wl_members_admin_update') then
     create policy wl_members_admin_update on public.wl_members for update to authenticated
@@ -264,3 +264,7 @@ do $$ begin
         and ((storage.foldername(name))[2] = auth.uid()::text or public.wl_is_admin()));
   end if;
 end $$;
+
+-- 2026-11-24: スタッフは自分の行だけ、管理者は会社全員を見られる（すでに作った環境はこれで直す）
+alter policy wl_members_read on public.wl_members
+  using (user_id = auth.uid() or (org_id = public.wl_my_org() and public.wl_is_admin()));
