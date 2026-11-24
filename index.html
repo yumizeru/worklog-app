@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="3">
+<meta name="app-version" content="4">
 <meta name="theme-color" content="#0f766e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -95,7 +95,7 @@
       <label for="siteSel" id="siteSelLabel">現場・作業</label>
       <select id="siteSel"></select>
       <label for="siteText" id="siteTextLabel" class="sub-label" hidden>現場名を入力<small>前に入れた名前は候補に出ます</small></label>
-      <input id="siteText" type="text" maxlength="60" list="siteHistory" autocomplete="off" placeholder="例：〇〇様邸 外壁" hidden>
+      <input id="siteText" type="text" maxlength="60" list="siteHistory" autocomplete="off" placeholder="例：〇〇様邸" hidden>
       <datalist id="siteHistory"></datalist>
     </div>
 
@@ -181,7 +181,7 @@
       <div class="acc-body">
         <p class="small">登録すると、作業する人は開始のときにここから選べます。一覧にない現場は「その他」を選んで自分で入力できます。1つも登録しなければ、毎回入力する欄だけが出ます。</p>
         <form id="siteForm" class="row">
-          <input id="siteName" type="text" maxlength="60" placeholder="例：〇〇ビル改修" required>
+          <input id="siteName" type="text" maxlength="60" placeholder="例：〇〇ビル" required>
           <button class="btn primary" type="submit"><i data-icon="plus"></i>追加</button>
         </form>
         <ul id="siteList" class="list compact"></ul>
