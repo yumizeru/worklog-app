@@ -80,6 +80,9 @@ input[type=text], input[type=email], input[type=password], input[type=date], sel
   padding: 12px; width: 100%; min-height: 50px;
 }
 input:focus, select:focus { outline: 3px solid color-mix(in srgb, var(--accent) 40%, transparent); border-color: var(--accent); }
+.field > label { font-weight: 600; }
+.field .sub-label { display: flex; flex-direction: column; margin-top: 6px; }
+.field .sub-label small { font-weight: 400; color: var(--muted); font-size: .8rem; }
 fieldset.choice { border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 12px 12px; margin: 0; }
 fieldset.choice legend { font-weight: 600; padding: 0 4px; }
 .radio { flex-direction: row !important; align-items: flex-start; gap: 10px !important; padding: 8px 0; font-weight: 500 !important; flex-wrap: wrap; }

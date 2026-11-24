@@ -268,3 +268,34 @@ end $$;
 -- 2026-11-24: スタッフは自分の行だけ、管理者は会社全員を見られる（すでに作った環境はこれで直す）
 alter policy wl_members_read on public.wl_members
   using (user_id = auth.uid() or (org_id = public.wl_my_org() and public.wl_is_admin()));
+
+-- 2026-11-24: 打刻 v2。登録済みの現場を選ぶか、現場名を自分で入力する（wl_punch は古い版のアプリ用に残す）
+create or replace function public.wl_record(
+  p_kind text, p_site uuid, p_site_name text, p_lat double precision, p_lng double precision,
+  p_accuracy double precision, p_geo_error text, p_photo text
+) returns public.wl_punches
+language plpgsql security definer set search_path = public as $$
+declare m public.wl_members; s public.wl_sites; r public.wl_punches; nm text;
+begin
+  select * into m from public.wl_members where user_id = auth.uid() and active;
+  if m.user_id is null then raise exception 'not_member'; end if;
+  if p_kind not in ('start', 'end') then raise exception 'bad_kind'; end if;
+  if p_site is not null then
+    select * into s from public.wl_sites where id = p_site and org_id = m.org_id;
+    if s.id is null then raise exception 'bad_site'; end if;
+    nm := s.name;
+  else
+    nm := nullif(left(btrim(regexp_replace(coalesce(p_site_name, ''), '\s+', ' ', 'g')), 60), '');
+  end if;
+  if p_photo is not null and p_photo not like m.org_id || '/' || m.user_id || '/%' then
+    raise exception 'bad_photo';
+  end if;
+  insert into public.wl_punches (org_id, user_id, kind, site_id, site_name, display_name,
+    lat, lng, accuracy, geo_error, photo_path)
+  values (m.org_id, m.user_id, p_kind, s.id, nm, m.display_name,
+    p_lat, p_lng, p_accuracy, left(p_geo_error, 200), p_photo)
+  returning * into r;
+  return r;
+end $$;
+revoke all on function public.wl_record(text, uuid, text, double precision, double precision, double precision, text, text) from public, anon;
+grant execute on function public.wl_record(text, uuid, text, double precision, double precision, double precision, text, text) to authenticated;

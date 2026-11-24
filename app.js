@@ -276,14 +276,42 @@ function renderPunchState() {
   btn.insertAdjacentHTML('afterbegin', icon(w ? 'square' : 'play'));
   $('#punchText').textContent = w ? '作業終了' : '作業開始';
 
-  // 現場は開始のときだけ選ぶ
+  // 現場は開始のときだけ。登録済みから選ぶか、自分で入力する
   const active = state.sites.filter(s => s.active);
-  $('#siteRow').hidden = w || !active.length;
+  $('#siteRow').hidden = w;
   const sel = $('#siteSel');
   const keep = sel.value || ls.get(LAST_SITE_KEY);
-  sel.innerHTML = '<option value="">選んでください</option>' + active.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
-  if (active.some(s => s.id === keep)) sel.value = keep;
+  sel.innerHTML = '<option value="">選んでください</option>' +
+    active.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('') +
+    `<option value="${FREE}">その他（自分で入力する）</option>`;
+  sel.value = active.some(s => s.id === keep) || keep === FREE ? keep : '';
+  $('#siteSel').hidden = $('#siteSelLabel').hidden = !active.length;
+  const text = $('#siteText');
+  if (!text.value) text.value = siteHistory()[0] || '';
+  $('#siteHistory').innerHTML = siteHistory().map(n => `<option value="${esc(n)}"></option>`).join('');
+  syncSiteText();
 }
+// 自分で入力した現場名（新しい順に10件まで、この端末に覚える）
+const FREE = '__free';
+const SITE_HISTORY_KEY = 'worklog:siteHistory';
+function siteHistory() {
+  try { const a = JSON.parse(ls.get(SITE_HISTORY_KEY) || '[]'); return Array.isArray(a) ? a.filter(x => typeof x === 'string') : []; } catch { return []; }
+}
+function rememberSite(name) {
+  ls.set(SITE_HISTORY_KEY, JSON.stringify([name, ...siteHistory().filter(n => n !== name)].slice(0, 10)));
+}
+// 登録済みの現場がないとき、または「その他」を選んだときだけ入力欄を出す
+function freeMode() { return $('#siteSel').hidden || $('#siteSel').value === FREE; }
+function syncSiteText() {
+  const free = freeMode();
+  $('#siteText').hidden = !free;
+  $('#siteTextLabel').hidden = !free;
+  $('#siteTextLabel').firstChild.textContent = $('#siteSel').hidden ? '現場名' : '現場名を入力';
+}
+$('#siteSel').addEventListener('change', () => {
+  syncSiteText();
+  if ($('#siteSel').value === FREE) $('#siteText').focus();
+});
 
 function recItem(p, opts = {}) {
   const map = p.lat != null
@@ -376,11 +404,15 @@ $('#punchBtn').addEventListener('click', async () => {
   const btn = $('#punchBtn');
   if (btn.disabled) return;
   const kind = working() ? 'end' : 'start';
-  const siteId = kind === 'start' && !$('#siteRow').hidden ? $('#siteSel').value : null;
-  if (kind === 'start' && !$('#siteRow').hidden && !siteId) {
-    toast('先に現場・作業を選んでください');
-    $('#siteSel').focus();
-    return;
+  let siteId = null, siteName = null;
+  if (kind === 'start') {
+    if (freeMode()) {
+      siteName = $('#siteText').value.replace(/\s+/g, ' ').trim();
+      if (!siteName) { toast('先に現場名を入力してください'); $('#siteText').focus(); return; }
+    } else {
+      siteId = $('#siteSel').value;
+      if (!siteId) { toast('先に現場・作業を選んでください'); $('#siteSel').focus(); return; }
+    }
   }
   btn.disabled = true;
   $('#punchText').textContent = '記録中…';
@@ -393,13 +425,14 @@ $('#punchBtn').addEventListener('click', async () => {
       const { error: ue } = await sb.storage.from('wl-photos').upload(photoPath, state.photo, { contentType: 'image/jpeg' });
       if (ue) throw ue;
     }
-    const { data, error } = await sb.rpc('wl_punch', {
-      p_kind: kind, p_site: siteId || null,
+    const { data, error } = await sb.rpc('wl_record', {
+      p_kind: kind, p_site: siteId || null, p_site_name: siteName,
       p_lat: pos.lat ?? null, p_lng: pos.lng ?? null, p_accuracy: pos.accuracy ?? null,
       p_geo_error: pos.error ?? null, p_photo: photoPath,
     });
     if (error) throw error;
-    if (siteId) ls.set(LAST_SITE_KEY, siteId);
+    if (kind === 'start') ls.set(LAST_SITE_KEY, siteId || FREE);
+    if (siteName) rememberSite(siteName);
     clearPhoto();
     notifyAdmins(data.id);
     toast(`${kind === 'start' ? '開始' : '終了'}を記録しました（${hm(data.created_at)}）${pos.error ? '／位置：' + pos.error : ''}`, 3500);

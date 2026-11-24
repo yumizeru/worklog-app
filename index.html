@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="1">
+<meta name="app-version" content="2">
 <meta name="theme-color" content="#0f766e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -91,9 +91,13 @@
       <div id="stateSub" class="state-sub"></div>
     </div>
 
-    <label id="siteRow" class="field" hidden>現場・作業
+    <div id="siteRow" class="field" hidden>
+      <label for="siteSel" id="siteSelLabel">現場・作業</label>
       <select id="siteSel"></select>
-    </label>
+      <label for="siteText" id="siteTextLabel" class="sub-label" hidden>現場名を入力<small>前に入れた名前は候補に出ます</small></label>
+      <input id="siteText" type="text" maxlength="60" list="siteHistory" autocomplete="off" placeholder="例：〇〇様邸 外壁" hidden>
+      <datalist id="siteHistory"></datalist>
+    </div>
 
     <div class="photo-row">
       <label class="btn ghost" id="photoBtn">
@@ -175,7 +179,7 @@
     <details class="acc admin-only">
       <summary><i data-icon="map-pin"></i><span class="acc-text"><b>現場・作業</b><small id="sumSites"></small></span><i data-icon="chevron-right" class="chev"></i></summary>
       <div class="acc-body">
-        <p class="small">登録すると、作業する人は開始のときにここから選びます。1つもなければ選ぶ欄は出ません。</p>
+        <p class="small">登録すると、作業する人は開始のときにここから選べます。一覧にない現場は「その他」を選んで自分で入力できます。1つも登録しなければ、毎回入力する欄だけが出ます。</p>
         <form id="siteForm" class="row">
           <input id="siteName" type="text" maxlength="60" placeholder="例：〇〇ビル改修" required>
           <button class="btn primary" type="submit"><i data-icon="plus"></i>追加</button>
@@ -197,7 +201,7 @@
       <div class="acc-body help">
         <h3>作業する人</h3>
         <ol>
-          <li>現場・作業を選ぶ（選ぶ欄があるとき）。</li>
+          <li>現場・作業を選ぶか、現場名を入力する。一覧にないときは「その他（自分で入力する）」を選ぶ。前に入れた名前は候補に出て、次回も残っています。</li>
           <li>写真を付けたいときは「写真を付ける」。付けなくても大丈夫。</li>
           <li>大きな「作業開始」ボタンを押す。時刻と位置が記録されます。</li>
           <li>終わったら同じ場所の「作業終了」を押す。</li>
