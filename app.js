@@ -117,15 +117,28 @@ $$('[data-auth]').forEach(b => b.addEventListener('click', () => {
 }));
 
 /* ---------- パスワードを忘れたとき ---------- */
+// メールは Brevo（外部のメール送信）経由で届く。届かないときは管理者が仮のパスワードを決められる
 function showForgot(on) {
-  // メールは無料プランだと会員に届かないので、管理者に再設定してもらう案内を出す
   $('#loginForm').hidden = on;
   $('#forgotForm').hidden = !on;
+  if (on && !$('#fgEmail').value) $('#fgEmail').value = $('#liEmail').value;
   $('#authMsg').textContent = '';
   $('#authMsg').classList.remove('ok');
 }
 $('#forgotOpen').addEventListener('click', () => showForgot(true));
 $('#forgotClose').addEventListener('click', () => showForgot(false));
+$('#forgotForm').addEventListener('submit', e => {
+  e.preventDefault();
+  busy(e.submitter || $('#forgotForm button[type=submit]'), async () => {
+    const msg = $('#authMsg');
+    msg.classList.remove('ok');
+    const redirectTo = location.origin + location.pathname;
+    const { error } = await sb.auth.resetPasswordForEmail($('#fgEmail').value.trim(), { redirectTo });
+    if (error) { msg.textContent = errText(error); return; }
+    msg.textContent = '登録されているアドレスなら、再設定のメールを送りました。メールのリンクを開いて、新しいパスワードを決めてください（iPhoneではSafariで開きます。決めたあと、ホーム画面のアプリでログインし直してください）';
+    msg.classList.add('ok');
+  });
+});
 
 $('#resetForm').addEventListener('submit', e => {
   e.preventDefault();

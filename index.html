@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="7">
+<meta name="app-version" content="8">
 <meta name="theme-color" content="#0f766e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -40,13 +40,14 @@
       <button class="btn link" type="button" id="forgotOpen">パスワードを忘れた</button>
     </form>
 
-    <div id="forgotForm" class="card form" hidden>
+    <form id="forgotForm" class="card form" hidden>
       <p><b>パスワードを忘れたとき</b></p>
-      <p class="small">会社の管理者に「パスワードを再設定してほしい」と伝えてください。管理者が仮のパスワードを決めて教えてくれます。</p>
-      <p class="small">仮のパスワードでログインしたら、「設定」→「アカウント」で自分のパスワードに変えられます。</p>
-      <p class="small muted">管理者の人が忘れたときは、ほかの管理者に頼んでください。</p>
+      <p class="small">登録したメールアドレスに、パスワードを決め直すためのリンクを送ります。</p>
+      <label>メールアドレス<input id="fgEmail" type="email" autocomplete="email" required></label>
+      <button class="btn primary wide" type="submit">再設定のメールを送る</button>
+      <p class="small muted">メールが届かないときは迷惑メールのフォルダも見てください。それでも届かなければ、会社の管理者に仮のパスワードを決めてもらえます。</p>
       <button class="btn link" type="button" id="forgotClose">ログインに戻る</button>
-    </div>
+    </form>
 
     <form id="signupForm" class="card form" hidden>
       <label>あなたの名前<small>管理者の画面にこの名前で表示されます（フルネーム推奨）</small>
